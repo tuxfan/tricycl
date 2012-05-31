@@ -256,7 +256,7 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 
 	size_t sub_size(kernel_info.work_group_size);
 	size_t sub_local_memory((sub_size+1)*5*sizeof(real_t));
-	//size_t sub_systems(0);
+	size_t sub_systems(0);
 	//size_t interface_systems(1);
 
 	if(system_size > kernel_info.work_group_size) {
@@ -265,10 +265,35 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 			sub_size /= 2;
 			sub_local_memory = (sub_size+1)*5*sizeof(real_t);
 		} // while
+
+		if(sub_size == 1) {
+			message("System size must be evenly divisible by "
+				"a valid work group size");
+			std::exit(1);
+		} // if
+
+		sub_systems = system_size/sub_size;
 	} // if
+
+	size_t interface_size = 2*sub_systems*num_systems;
+	size_t interface_local_memory = (interface_size+1)*5*sizeof(real_t);
+
+	if(interface_local_memory > device_info.local_mem_size) {
+		message("Interface system is too large for device! Unrecoverable!");
+		std::exit(1);
+	} // if
+
+	interface_t * interface = create_interface_system(system_size,
+		num_systems, sub_size, sub_systems, a, b, c, d);
+
+	delete interface;
 
 	return ierr;
 } // TriCyCL<>::solve
+
+/*----------------------------------------------------------------------------*
+ * Create the interface system.
+ *----------------------------------------------------------------------------*/
 
 template<typename real_t>
 typename TriCyCL<real_t>::interface_t *
@@ -328,6 +353,10 @@ TriCyCL<real_t>::create_interface_system(size_t system_size,
 	return interface;
 } // create_interface_system
 
+/*----------------------------------------------------------------------------*
+ * Get device information.
+ *----------------------------------------------------------------------------*/
+
 template<typename real_t>
 typename TriCyCL<real_t>::device_info_t
 TriCyCL<real_t>::get_device_info(cl_device_id & id) {
@@ -358,6 +387,10 @@ TriCyCL<real_t>::get_device_info(cl_device_id & id) {
 
 	return info;
 } // TriCyCL<>::get_device_info
+
+/*----------------------------------------------------------------------------*
+ * Get kernel information.
+ *----------------------------------------------------------------------------*/
 
 template<typename real_t>
 typename TriCyCL<real_t>::kernel_work_group_info_t
