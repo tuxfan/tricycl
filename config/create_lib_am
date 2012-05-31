@@ -31,7 +31,7 @@ echo "	@EXTRA_CPPFLAGS@"
 echo
 echo "libtricycl_includedir = \${includedir}"
 echo
-echo "AM_CPPFLAGS = -std=c++0x"
+echo "AM_CXXFLAGS = -std=c++0x"
 
 echo
 echo "#------------------------------------------------------------------------------#"

@@ -29,30 +29,43 @@ int main(int argc, char ** argv) {
 	cl_device_id device_id;
 	cl_context context;
 	cl_command_queue queue;
+	cl_platform_id platform;
 
-	ierr = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_DEFAULT, 1, &device_id, NULL);
+	ierr = clGetPlatformIDs(1, &platform, NULL);
+
+	if(ierr != CL_SUCCESS) {
+		fprintf(stderr, "clGetPlatformIDs failed with %d\n", ierr);
+		exit(1);
+	} // if
+
+	int32_t cpu = 1;
+	ierr = clGetDeviceIDs(platform, cpu == 1 ? CL_DEVICE_TYPE_CPU :
+		CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
 
 	if(ierr != CL_SUCCESS) {
 		fprintf(stderr, "clGetDeviceIDs failed with %d\n", ierr);
+		exit(1);
 	} // if
 
 	context = clCreateContext(0, 1, &device_id, NULL, NULL, &ierr);
 
 	if(ierr != CL_SUCCESS) {
 		fprintf(stderr, "clCreateContext failed with %d\n", ierr);
+		exit(1);
 	} // if
 
 	queue = clCreateCommandQueue(context, device_id, 0, &ierr);
 
 	if(ierr != CL_SUCCESS) {
 		fprintf(stderr, "clCreateCommandQueue failed with %d\n", ierr);
+		exit(1);
 	} // if
 
 	
 	/*-------------------------------------------------------------------------*
 	 * Initialize TriCyCL
 	 *-------------------------------------------------------------------------*/
-	tricycl_init_sp(device_id, context, queue);
+	size_t token = tricycl_init_sp(device_id, context, queue);
 
 	/*-------------------------------------------------------------------------*
 	 * Create system
@@ -84,6 +97,11 @@ int main(int argc, char ** argv) {
 		sub[s*elements] = 0.0;
 		sup[s*elements + elements-1] = 0.0;
 	} // for
+
+	/*-------------------------------------------------------------------------*
+	 * Solve
+	 *-------------------------------------------------------------------------*/
+	ierr = tricycl_solve_sp(token, elements, systems, sub, diag, sup, rhs, x);
 
 	return 0;
 } // main

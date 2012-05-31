@@ -46,7 +46,8 @@ CONFIG_PROG_DOXYGEN
 # Enable options
 #------------------------------------------------------------------------------#
 
-CONFIG_GENERIC_ENABLE(assertions, ASSERTIONS)
+CONFIG_GENERIC_ENABLE(tricycl_verbose, TRICYCL_VERBOSE)
+CONFIG_GENERIC_ENABLE(tricycl_assertions, TRICYCL_ASSERTIONS)
 
 #------------------------------------------------------------------------------#
 # OpenCL
