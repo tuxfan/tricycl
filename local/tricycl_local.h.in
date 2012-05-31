@@ -1,0 +1,20 @@
+/******************************************************************************\
+ * Copyright (c) 2012 Los Alamos National Security, LLC
+ * All rights reserved.
+\******************************************************************************/
+
+/*----------------------------------------------------------------------------* 
+ * This file handles the differences in naming conventions used by different
+ * vendors for OpenCL headers.
+ *----------------------------------------------------------------------------*/
+
+#ifndef tricycl_local_h
+#define tricycl_local_h
+
+#if !defined(_tricycl_source) && !defined(_include_tricycl_h)
+#error "Error: do not include this file directly, use #include <tricycl.h>"
+#endif
+
+#include <@OPENCL_HEADER@>
+
+#endif // tricycl_local_h

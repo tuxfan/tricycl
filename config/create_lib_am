@@ -25,7 +25,9 @@ echo "#-------------------------------------------------------------------------
 echo
 echo "lib_LTLIBRARIES = libtricycl.la"
 echo
-echo "INCLUDES = -I\${top_srcdir}/src"
+echo "INCLUDES = -I\${top_srcdir}/src \\"
+echo "	-I\${top_builddir}/local \\"
+echo "	@EXTRA_CPPFLAGS@"
 echo
 echo "libtricycl_includedir = \${includedir}"
 echo
@@ -68,4 +70,6 @@ for file in `$find_exec src -type f -regex $src_str | sort` ; do
 done
 
 echo
-echo "libtricycl_la_LDFLAGS = @VERSION_INFORMATION@"
+echo "libtricycl_la_LDFLAGS = @VERSION_INFORMATION@ \\"
+echo "	@EXTRA_LDFLAGS@"
+echo "libtricycl_la_LIBADD = @EXTRA_LIBS@"

@@ -3,7 +3,10 @@
 
 bin_PROGRAMS = poisson
 
-INCLUDES = -I${top_srcdir}/src
+INCLUDES = -I${top_srcdir}/src \
+	-I${top_builddir}/local \
+	@EXTRA_CPPFLAGS@
 
 poisson_SOURCES = @top_builddir@/bin/poisson.c
-poisson_LDADD = ${top_builddir}/lib/libtricycl.la
+poisson_LDFLAGS = @EXTRA_LDFLAGS@
+poisson_LDADD = @EXTRA_LIBS@ ${top_builddir}/lib/libtricycl.la

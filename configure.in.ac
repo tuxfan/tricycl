@@ -15,12 +15,19 @@ AC_SUBST(VERSION_INFORMATION)
 AM_INIT_AUTOMAKE
 
 #------------------------------------------------------------------------------#
+# Machine file specification
+#------------------------------------------------------------------------------#
+
+CONFIG_WITH_MACHINE("$srcdir/machine")
+
+#------------------------------------------------------------------------------#
 # Configuration targets
 #------------------------------------------------------------------------------#
 
 AC_CONFIG_FILES([Makefile \
 	lib/Makefile \
 	bin/Makefile \
+	local/tricycl_local.h \
 	doc/Makefile \
 	doc/doxygen.conf \
 ])
@@ -30,6 +37,7 @@ AC_CONFIG_FILES([Makefile \
 #------------------------------------------------------------------------------#
 
 AC_PROG_CC
+AC_PROG_FC
 AC_PROG_CXX
 AC_PROG_LIBTOOL
 CONFIG_PROG_DOXYGEN
@@ -39,6 +47,24 @@ CONFIG_PROG_DOXYGEN
 #------------------------------------------------------------------------------#
 
 CONFIG_GENERIC_ENABLE(assertions, ASSERTIONS)
+
+#------------------------------------------------------------------------------#
+# OpenCL
+#------------------------------------------------------------------------------#
+
+CONFIG_GENERIC_LIB(opencl, OPENCL, [clReleaseMemObject ((cl_mem) 0)], C)
+
+EXTRA_CPPFLAGS="$EXTRA_CPPFLAGS $OPENCL_CPPFLAGS"
+EXTRA_LDFLAGS="$EXTRA_LDFLAGS $OPENCL_LDFLAGS"
+EXTRA_LIBS="$EXTRA_LIBS $OPENCL_LIBS"
+
+#------------------------------------------------------------------------------#
+# Set extras
+#------------------------------------------------------------------------------#
+
+AC_SUBST(EXTRA_CPPFLAGS)
+AC_SUBST(EXTRA_LDFLAGS)
+AC_SUBST(EXTRA_LIBS)
 
 #------------------------------------------------------------------------------#
 # Handle Doxygen
