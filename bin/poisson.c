@@ -50,7 +50,7 @@ int main(int argc, char ** argv) {
 
 	
 	/*-------------------------------------------------------------------------*
-	 * Create system
+	 * Initialize TriCyCL
 	 *-------------------------------------------------------------------------*/
 	tricycl_init_sp(device_id, context, queue);
 

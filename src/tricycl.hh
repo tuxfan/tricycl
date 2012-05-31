@@ -93,6 +93,18 @@ private:
 
 	~TriCyCL() {}
 
+	size_t iterations(size_t elements) {
+		size_t ita(elements/2);
+		size_t cnt(0);
+
+		do {
+			++cnt;
+			ita/=2;
+		} while(ita>1);
+
+		return cnt;
+	} // iterations
+
 	std::vector<solver_data_t> data_;
 
 }; // class TriCyCL
