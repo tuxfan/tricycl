@@ -284,10 +284,13 @@ int32_t
 TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	size_t num_systems, real_t * a, real_t * b, real_t * c, real_t * d,
 	real_t * x) {
+	CALLER_SELF
 	int32_t ierr = 0;
 
 	cl_device_id device_id = data_[token].id;
 	cl_kernel kernel = data_[token].kernel;
+	cl_context context = data_[token].context;
+	cl_command_queue queue = data_[token].queue;
 
 	/*-------------------------------------------------------------------------*
 	 * Get device and kernel information.
@@ -302,7 +305,6 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	size_t sub_size(kernel_info.work_group_size);
 	size_t sub_local_memory((sub_size+1)*5*sizeof(real_t));
 	size_t sub_systems(0);
-	//size_t interface_systems(1);
 
 	if(system_size > kernel_info.work_group_size) {
 		while(system_size%sub_size != 0 && sub_size > 1 &&
@@ -323,8 +325,10 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	/*-------------------------------------------------------------------------*
 	 * Setup interface system.
 	 *-------------------------------------------------------------------------*/
-	size_t interface_size = 2*sub_systems*num_systems;
-	size_t interface_local_memory = (interface_size+1)*5*sizeof(real_t);
+	size_t interface_size(2*sub_systems*num_systems);
+	size_t interface_local_memory((interface_size+1)*5*sizeof(real_t));
+	size_t interface_iterations(iterations(interface_size));
+	size_t interface_systems(1);
 
 	if(interface_local_memory > device_info.local_mem_size) {
 		message("Interface system is too large for device! Unrecoverable!");
@@ -334,12 +338,44 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	interface_t * interface = create_interface_system(system_size,
 		num_systems, sub_size, sub_systems, a, b, c, d);
 
-	cl_mem d_ai;
-	cl_mem d_bi;
-	cl_mem d_ci;
-	cl_mem d_di;
+	// FIXME: Error checking
+	cl_mem d_ia = clCreateBuffer(context,
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
+		interface->a, &ierr);
+	cl_mem d_ib = clCreateBuffer(context,
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
+		interface->b, &ierr);
+	cl_mem d_ic = clCreateBuffer(context,
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
+		interface->c, &ierr);
+	cl_mem d_id = clCreateBuffer(context,
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
+		interface->d, &ierr);
+	cl_mem d_ix = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
+		interface_size*sizeof(real_t), NULL, &ierr);
 
-	
+	ierr = clSetKernelArg(kernel, 0, sizeof(cl_mem), &d_ia);
+	ierr = clSetKernelArg(kernel, 1, sizeof(cl_mem), &d_ib);
+	ierr = clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_ic);
+	ierr = clSetKernelArg(kernel, 3, sizeof(cl_mem), &d_id);
+	ierr = clSetKernelArg(kernel, 4, sizeof(cl_mem), &d_ix);
+	ierr = clSetKernelArg(kernel, 5,
+		(interface_size+1)*5*sizeof(real_t), &d_ix);
+	ierr = clSetKernelArg(kernel, 6, sizeof(int32_t), &interface_size);
+	ierr = clSetKernelArg(kernel, 7, sizeof(int32_t), &interface_systems);
+	ierr = clSetKernelArg(kernel, 8, sizeof(int32_t), &interface_iterations);
+
+	size_t global_offset(0);
+	size_t global_size(interface_size);
+	size_t local_size(interface_size);
+	cl_event event;
+
+	ierr = clEnqueueNDRangeKernel(queue, kernel, 1, &global_offset,
+		&global_size, &local_size, 0, NULL, &event);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clEnqueueNDRangeKernel, ierr);
+	} // if
 
 	delete interface;
 
