@@ -68,19 +68,20 @@ public:
 	 *-------------------------------------------------------------------------*/
 
 	struct interface_t {
+		size_t elements;
 		real_t * a;
 		real_t * b;
 		real_t * c;
 		real_t * d;
 
 		interface_t()
-			: a(nullptr), b(nullptr), c(nullptr), d(nullptr)
+			: elements(0), a(nullptr), b(nullptr), c(nullptr), d(nullptr)
 			{}
 
-		interface_t(size_t elements)
-			: a(nullptr), b(nullptr), c(nullptr), d(nullptr)
+		interface_t(size_t _elements)
+			: elements(0), a(nullptr), b(nullptr), c(nullptr), d(nullptr)
 			{
-				allocate(elements);
+				allocate(_elements);
 			} // interface_t
 
 		~interface_t()
@@ -91,17 +92,26 @@ public:
 				delete[] d;
 			} // ~interface_t
 
-		void allocate(size_t elements) {
+		void allocate(size_t _elements) {
 			delete[] a;
 			delete[] b;
 			delete[] c;
 			delete[] d;
 
-			a = new real_t[elements];
-			b = new real_t[elements];
-			c = new real_t[elements];
-			d = new real_t[elements];
+			a = new real_t[_elements];
+			b = new real_t[_elements];
+			c = new real_t[_elements];
+			d = new real_t[_elements];
+			elements = _elements;
 		} // allocate
+
+		void print() {
+			for(size_t i(0); i<elements; ++i) {
+				std::cerr << a[i] << " " << b[i] << " " <<
+					c[i] << " " << d[i] << std::endl;
+			} // for
+		} // operator <<
+
 	}; // struct interface_t
 
 	/*-------------------------------------------------------------------------*
@@ -149,6 +159,10 @@ private:
 		cl_ulong local_mem_size;
 	}; // struct device_info_t
 
+	/*-------------------------------------------------------------------------*
+	 * Kernel inforamtion.
+	 *-------------------------------------------------------------------------*/
+
 	struct kernel_work_group_info_t {
 		size_t global_work_size[3];
 		size_t work_group_size;
@@ -158,19 +172,40 @@ private:
 		cl_ulong private_mem_size;
 	}; // struct kernel_work_group_info
 
+	/*-------------------------------------------------------------------------*
+	 * Hide these.
+	 *-------------------------------------------------------------------------*/
+
 	TriCyCL() {}
 	TriCyCL(const TriCyCL &) {}
 	TriCyCL & operator = (const TriCyCL &);
 
 	~TriCyCL() {}
 
+	/*-------------------------------------------------------------------------*
+	 * Create interface systems.
+	 *-------------------------------------------------------------------------*/
+
 	interface_t * create_interface_system(size_t system_size,
 		size_t num_systems, size_t sub_size, size_t sub_systems,
 		real_t * a, real_t * b, real_t * c, real_t * d);
 
+	/*-------------------------------------------------------------------------*
+	 * Get device info.
+	 *-------------------------------------------------------------------------*/
+
 	device_info_t get_device_info(cl_device_id & id);
+
+	/*-------------------------------------------------------------------------*
+	 * Get kernel info.
+	 *-------------------------------------------------------------------------*/
+
 	kernel_work_group_info_t get_kernel_work_group_info(cl_device_id & id,
 		device_info_t & device_info, cl_kernel & kernel);
+
+	/*-------------------------------------------------------------------------*
+	 * Iterations for cyclic reduction.
+	 *-------------------------------------------------------------------------*/
 
 	size_t iterations(size_t elements) {
 		size_t ita(elements/2);
@@ -178,6 +213,10 @@ private:
 		do { ++cnt; ita/=2; } while(ita>1);
 		return cnt;
 	} // iterations
+
+	/*-------------------------------------------------------------------------*
+	 * Private data members.
+	 *-------------------------------------------------------------------------*/
 
 	std::vector<solver_data_t> data_;
 
@@ -301,7 +340,8 @@ TriCyCL<real_t>::create_interface_system(size_t system_size,
 	size_t num_systems, size_t sub_size, size_t sub_systems,
 	real_t * a, real_t * b, real_t * c, real_t * d) {
 	
-	interface_t * interface = new interface_t[num_systems*sub_size*sub_systems];
+	interface_t * interface =
+		new interface_t(2*num_systems*sub_systems);
 
 	real_t * ia = interface->a;
 	real_t * ib = interface->b;
@@ -349,6 +389,10 @@ TriCyCL<real_t>::create_interface_system(size_t system_size,
 			} // for
 		} // for
 	} // for
+
+#if 1
+	interface->print();
+#endif
 
 	return interface;
 } // create_interface_system
