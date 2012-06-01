@@ -289,10 +289,16 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	cl_device_id device_id = data_[token].id;
 	cl_kernel kernel = data_[token].kernel;
 
+	/*-------------------------------------------------------------------------*
+	 * Get device and kernel information.
+	 *-------------------------------------------------------------------------*/
 	device_info_t device_info = get_device_info(device_id);
 	kernel_work_group_info_t kernel_info =
 		get_kernel_work_group_info(device_id, device_info, kernel);
 
+	/*-------------------------------------------------------------------------*
+	 * Sub-system calculations.
+	 *-------------------------------------------------------------------------*/
 	size_t sub_size(kernel_info.work_group_size);
 	size_t sub_local_memory((sub_size+1)*5*sizeof(real_t));
 	size_t sub_systems(0);
@@ -314,6 +320,9 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 		sub_systems = system_size/sub_size;
 	} // if
 
+	/*-------------------------------------------------------------------------*
+	 * Setup interface system.
+	 *-------------------------------------------------------------------------*/
 	size_t interface_size = 2*sub_systems*num_systems;
 	size_t interface_local_memory = (interface_size+1)*5*sizeof(real_t);
 
@@ -324,6 +333,13 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 
 	interface_t * interface = create_interface_system(system_size,
 		num_systems, sub_size, sub_systems, a, b, c, d);
+
+	cl_mem d_ai;
+	cl_mem d_bi;
+	cl_mem d_ci;
+	cl_mem d_di;
+
+	
 
 	delete interface;
 
