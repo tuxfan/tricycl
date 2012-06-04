@@ -587,7 +587,7 @@ TriCyCL<real_t>::create_interface_system(size_t system_size,
 
 			// eliminate interface sub-diagonal
 			for(size_t i=2; i<sub_size; ++i) {
-				const float ratio = -1.0*a[roff+i]/ib[lroff+1];
+				const real_t ratio = -1.0*a[roff+i]/ib[lroff+1];
 
 				ia[lroff+1] = ratio*ia[lroff+1];
 				ib[lroff+1] = ratio*c[roff+i-1] + b[roff+i];
@@ -603,7 +603,7 @@ TriCyCL<real_t>::create_interface_system(size_t system_size,
 
 			// eliminate interface super-diagonal
 			for(size_t i=sub_size-3; i != 0; --i) {
-				const float ratio = -1.0*c[roff+i]/ib[lroff];
+				const real_t ratio = -1.0*c[roff+i]/ib[lroff];
 
 				// ia is static
 				ib[lroff] = ratio*a[roff+i+1] + b[roff+i];

@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <tricycl.h>
 
@@ -14,6 +15,8 @@
 #endif
 
 #define SQR(x) (x)*(x)
+#define ABS(x, y) (x)-(y) > 0 ? (x)-(y) : (y)-(x)
+#define MAX(x, y) (x) > (y) ? (x) : (y)
 
 int main(int argc, char ** argv) {
 	int32_t ierr;
@@ -115,12 +118,23 @@ int main(int argc, char ** argv) {
 	ierr = tricycl_solve_dp(token, elements, systems, sub, diag, sup, rhs, x);
 #endif
 
+	double rms = 0.0;
+	double max = 0.0;
 	for(size_t s=0; s<systems; ++s) {
 		for(size_t i=0; i<elements; ++i) {
-			fprintf(stdout, "%lf\n", x[s*elements + i]);
+			size_t offset = s*elements+i;
+			fprintf(stdout, "%.16lf\n", x[offset]);
+			const double abs = ABS(analytic[offset], x[offset]);
+			rms += SQR(abs);
+			max = MAX(abs, max);
 		} // for
 	} // for
 	
+	rms /= (double)elements*systems;
+	rms = sqrt(rms);
+
+	fprintf(stdout, "rms: %e\n", rms);
+	fprintf(stdout, "max abs: %e\n", max);
 
 	return 0;
 } // main
