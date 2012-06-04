@@ -115,14 +115,13 @@ __kernel void uncouple(__global real_t * a, __global real_t * b,
 	size_t wgsz = get_local_size(0);
 
 	size_t ioff = blid*wgsz + thid%wgsz;
-	size_t foff = blid*system_size + (thid/2)*sub_size + (thid%2)*(sub_size-1);
+	size_t foff = blid*system_size + (thid/2)*sub_size +
+		(thid%2)*(sub_size-1);
 
 	a[foff] = 0.0;
 	b[foff] = 1.0;
 	c[foff] = 0.0;
 	d[foff] = ix[ioff];
-
-//	printf("ioff: %d, foff: %d\n", (int)ioff, (int)foff);
 } // uncouple
 
 /*

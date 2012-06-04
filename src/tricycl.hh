@@ -374,15 +374,15 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	/*-------------------------------------------------------------------------*
 	 * Create system buffers.
 	 *-------------------------------------------------------------------------*/
-	size_t full_size(sub_size*sub_systems*num_systems);
+	size_t full_size(system_size*num_systems);
 
-	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+	create_buffer(context, CL_MEM_READ_WRITE, full_size*sizeof(real_t),
 		d_a, NULL);
-	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+	create_buffer(context, CL_MEM_READ_WRITE, full_size*sizeof(real_t),
 		d_b, NULL);
-	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+	create_buffer(context, CL_MEM_READ_WRITE, full_size*sizeof(real_t),
 		d_c, NULL);
-	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+	create_buffer(context, CL_MEM_READ_WRITE, full_size*sizeof(real_t),
 		d_d, NULL);
 	create_buffer(context, CL_MEM_WRITE_ONLY, full_size*sizeof(real_t),
 		d_x, NULL);
@@ -485,20 +485,6 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 		CL_ABORTerr(clSetKernelArg, ierr);
 	} // if
 
-#if 1
-	/*-------------------------------------------------------------------------*
-	 * Read interface system solution.
-	 *-------------------------------------------------------------------------*/
-	ierr = clEnqueueReadBuffer(queue, d_ix, 1, offset,
-		interface_size*sizeof(real_t), interface->x, 0, NULL, NULL);
-
-	if(ierr != CL_SUCCESS) {
-		CL_ABORTerr(clSetKernelArg, ierr);
-	} // if
-
-	interface->print();
-#endif
-
 	/*-------------------------------------------------------------------------*
 	 * Block for full system write.
 	 *-------------------------------------------------------------------------*/
@@ -508,8 +494,11 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 		CL_ABORTerr(clWaitForEvents, ierr);
 	} // if
 
-	global_size = interface_size*num_systems;
-	local_size = sub_systems*num_systems;
+	/*-------------------------------------------------------------------------*
+	 * Copy interface results into full system.
+	 *-------------------------------------------------------------------------*/
+	global_size = interface_size;
+	local_size = interface_size/num_systems;
 
 	ierr = clEnqueueNDRangeKernel(queue, copy_kernel, 1, &offset,
 		&global_size, &local_size, 0, NULL, &event);
@@ -518,6 +507,9 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 		CL_ABORTkernel(clEnqueueNDRangeKernel, ierr, "solve");
 	} // if
 
+	/*-------------------------------------------------------------------------*
+	 * Block for copy operation.
+	 *-------------------------------------------------------------------------*/
 	ierr = clWaitForEvents(1, &event);
 
 	if(ierr != CL_SUCCESS) {
@@ -525,7 +517,7 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	} // if
 
 	/*-------------------------------------------------------------------------*
-	 * Solve system system.
+	 * Solve full system.
 	 *-------------------------------------------------------------------------*/
 	global_size = full_size;
 	local_size = sub_size;

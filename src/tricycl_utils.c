@@ -29,20 +29,13 @@ void error(const char * format, ...) {
 } // error
 
 void warning(const char * format, ...) {
-// only output warnings if we're doing ENABLE_OCL_VERBOSE
-#if defined(ENABLE_OCL_VERBOSE)
-	// Note: ocl_warnings allow internal use of functions
-	// without issueing a warning.
-	if(ocl_warning) {
-		va_list args;
-		va_start(args, format);
+// only output warnings if we're doing ENABLE_TRICYCL_VERBOSE
+#if defined(ENABLE_TRICYCL_VERBOSE)
+	va_list args;
+	va_start(args, format);
 
-		fprintf(stderr, "Warning: ");
-		vfprintf(stdout, format, args);
-	} // if
-
-	// reset
-	ocl_warning = 1;
+	fprintf(stderr, "Warning: ");
+	vfprintf(stdout, format, args);
 #endif
 } // warning
 
