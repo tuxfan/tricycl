@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 #define _include_tricycl_h
 
@@ -314,16 +315,25 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	kernel_work_group_info_t kernel_info =
 		get_kernel_work_group_info(device_id, device_info, pcr_kernel);
 
+	// FIXME: Testing
+//kernel_info.work_group_size = 32;
+
 	/*-------------------------------------------------------------------------*
 	 * Sub-system calculations.
 	 *-------------------------------------------------------------------------*/
-	size_t sub_size(kernel_info.work_group_size);
+#define MIN(x,y) (x) < (y) ? (x) : (y)
+	size_t places = log2(kernel_info.work_group_size);
+	kernel_info.work_group_size = 1<<places;
+	// FIXME: Testing
+	size_t work_group_size = MIN(kernel_info.work_group_size, 4096);
+	size_t sub_size(work_group_size);
 	size_t sub_local_memory((sub_size+1)*5*sizeof(real_t));
 	size_t sub_systems(0);
+#undef MIN
 
-	if(system_size > kernel_info.work_group_size) {
-		while(system_size%sub_size != 0 && sub_size > 1 &&
-			sub_local_memory > device_info.local_mem_size) {
+	if(system_size > work_group_size) {
+		while((system_size%sub_size != 0 ||
+			sub_local_memory > device_info.local_mem_size) && sub_size > 1) {
 			sub_size /= 2;
 			sub_local_memory = (sub_size+1)*5*sizeof(real_t);
 		} // while
@@ -337,6 +347,9 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 		sub_systems = system_size/sub_size;
 	} // if
 
+// FIXME: Testing
+//message("sub_size: %d\n", (int)sub_size);
+
 	/*-------------------------------------------------------------------------*
 	 * Setup interface system.
 	 *-------------------------------------------------------------------------*/
@@ -345,8 +358,9 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	size_t interface_iterations(iterations(interface_size));
 	size_t interface_systems(1);
 
-	if(interface_local_memory > device_info.local_mem_size) {
-		message("Interface system is too large for device! Unrecoverable!");
+	if(interface_size > kernel_info.work_group_size ||
+		interface_local_memory > device_info.local_mem_size) {
+		message("Interface system is too large for device! Unrecoverable!\n");
 		std::exit(1);
 	} // if
 

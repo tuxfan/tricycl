@@ -8,6 +8,8 @@
 
 #include <tricycl.h>
 
+//#define SINGLE_PRECISION
+
 #if defined(SINGLE_PRECISION)
 	typedef float real_t;
 #else
@@ -45,7 +47,7 @@ int main(int argc, char ** argv) {
 		exit(1);
 	} // if
 
-	int32_t cpu = 1;
+	int32_t cpu = 0;
 	ierr = clGetDeviceIDs(platform, cpu == 1 ? CL_DEVICE_TYPE_CPU :
 		CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
 

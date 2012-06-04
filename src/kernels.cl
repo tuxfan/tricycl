@@ -27,7 +27,7 @@
 //#define NATIVE_DIVIDE
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 __kernel void pcr_branch_free_kernel(__global real_t *a_d,
 	__global real_t *b_d, __global real_t *c_d, __global real_t *d_d,
