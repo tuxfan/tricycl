@@ -18,6 +18,7 @@ extern "C" {
 
 size_t tricycl_init_sp(cl_device_id id, cl_context context,
 	cl_command_queue queue);
+
 size_t tricycl_init_dp(cl_device_id id, cl_context context,
 	cl_command_queue queue);
 
@@ -29,7 +30,6 @@ size_t tricycl_init_dp(cl_device_id id, cl_context context,
 int32_t tricycl_solve_sp(size_t token, size_t system_size, size_t num_systems,
 	float * a, float * b, float * c, float * d, float * x);
 
-#if 0
 /*!
 \page tricycl_solve_dp
 
@@ -37,7 +37,6 @@ int32_t tricycl_solve_sp(size_t token, size_t system_size, size_t num_systems,
  */
 int32_t tricycl_solve_dp(size_t token, size_t system_size, size_t num_systems,
 	double * a, double * b, double * c, double * d, double * x);
-#endif
 
 #if defined(__cplusplus)
 }

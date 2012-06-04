@@ -27,6 +27,7 @@ CONFIG_WITH_MACHINE("$srcdir/machine")
 AC_CONFIG_FILES([Makefile \
 	lib/Makefile \
 	bin/Makefile \
+	utils/Makefile \
 	local/tricycl_local.h \
 	doc/Makefile \
 	doc/doxygen.conf \

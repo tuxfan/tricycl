@@ -7,7 +7,11 @@
 
 #include <tricycl.h>
 
-typedef float real_t;
+#if defined(SINGLE_PRECISION)
+	typedef float real_t;
+#else
+	typedef double real_t;
+#endif
 
 #define SQR(x) (x)*(x)
 
@@ -65,7 +69,11 @@ int main(int argc, char ** argv) {
 	/*-------------------------------------------------------------------------*
 	 * Initialize TriCyCL
 	 *-------------------------------------------------------------------------*/
+#if defined(SINGLE_PRECISION)
 	size_t token = tricycl_init_sp(device_id, context, queue);
+#else
+	size_t token = tricycl_init_dp(device_id, context, queue);
+#endif
 
 	/*-------------------------------------------------------------------------*
 	 * Create system
@@ -101,7 +109,18 @@ int main(int argc, char ** argv) {
 	/*-------------------------------------------------------------------------*
 	 * Solve
 	 *-------------------------------------------------------------------------*/
+#if defined(SINGLE_PRECISION)
 	ierr = tricycl_solve_sp(token, elements, systems, sub, diag, sup, rhs, x);
+#else
+	ierr = tricycl_solve_dp(token, elements, systems, sub, diag, sup, rhs, x);
+#endif
+
+	for(size_t s=0; s<systems; ++s) {
+		for(size_t i=0; i<elements; ++i) {
+			fprintf(stdout, "%lf\n", x[s*elements + i]);
+		} // for
+	} // for
+	
 
 	return 0;
 } // main

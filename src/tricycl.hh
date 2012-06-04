@@ -11,7 +11,7 @@
 #define _include_tricycl_h
 
 #include <tricycl_local.h>
-#include <tricycl_kernels.hh>
+#include <kernel_strings.h>
 #include <tricycl_utils.h>
 
 /*----------------------------------------------------------------------------*
@@ -56,7 +56,8 @@ public:
 		cl_context context;	
 		cl_command_queue queue;
 		cl_program program;
-		cl_kernel kernel;
+		cl_kernel pcr_kernel;
+		cl_kernel copy_kernel;
 
 		solver_data_t(cl_device_id & _id, cl_context & _context,
 			cl_command_queue & _queue)
@@ -73,13 +74,16 @@ public:
 		real_t * b;
 		real_t * c;
 		real_t * d;
+		real_t * x;
 
 		interface_t()
-			: elements(0), a(nullptr), b(nullptr), c(nullptr), d(nullptr)
+			: elements(0), a(nullptr), b(nullptr), c(nullptr),
+			d(nullptr), x(nullptr)
 			{}
 
 		interface_t(size_t _elements)
-			: elements(0), a(nullptr), b(nullptr), c(nullptr), d(nullptr)
+			: elements(0), a(nullptr), b(nullptr), c(nullptr),
+			d(nullptr), x(nullptr)
 			{
 				allocate(_elements);
 			} // interface_t
@@ -90,6 +94,7 @@ public:
 				delete[] b;
 				delete[] c;
 				delete[] d;
+				delete[] x;
 			} // ~interface_t
 
 		void allocate(size_t _elements) {
@@ -97,18 +102,20 @@ public:
 			delete[] b;
 			delete[] c;
 			delete[] d;
+			delete[] x;
 
 			a = new real_t[_elements];
 			b = new real_t[_elements];
 			c = new real_t[_elements];
 			d = new real_t[_elements];
+			x = new real_t[_elements];
 			elements = _elements;
 		} // allocate
 
 		void print() {
 			for(size_t i(0); i<elements; ++i) {
 				std::cerr << a[i] << " " << b[i] << " " <<
-					c[i] << " " << d[i] << std::endl;
+					c[i] << " " << d[i] << " " << x[i] << std::endl;
 			} // for
 		} // operator <<
 
@@ -190,6 +197,9 @@ private:
 		size_t num_systems, size_t sub_size, size_t sub_systems,
 		real_t * a, real_t * b, real_t * c, real_t * d);
 
+	void create_buffer(cl_context & context, cl_mem_flags flags,
+		size_t bytes, cl_mem & d_p, void * h_p);
+
 	/*-------------------------------------------------------------------------*
 	 * Get device info.
 	 *-------------------------------------------------------------------------*/
@@ -235,7 +245,7 @@ TriCyCL<real_t>::init(cl_device_id & id, cl_context & context,
 
 	// create program object
 	_solver_data.program = clCreateProgramWithSource(_solver_data.context,
-		1, (const char **)&pcr_kernels_PPSTR, NULL, &ierr);
+		1, (const char **)&kernels_PPSTR, NULL, &ierr);
 
 	if(ierr != CL_SUCCESS) {
 		std::cerr << "clCreateProgramWithSource failed with " <<
@@ -262,8 +272,12 @@ TriCyCL<real_t>::init(cl_device_id & id, cl_context & context,
 	} // if
 
 	// create solver kernel
-	_solver_data.kernel = clCreateKernel(_solver_data.program,
+	_solver_data.pcr_kernel = clCreateKernel(_solver_data.program,
 		"pcr_branch_free_kernel", &ierr);
+
+	// create copy kernel
+	_solver_data.copy_kernel = clCreateKernel(_solver_data.program,
+		"uncouple", &ierr);
 
 	if(ierr != CL_SUCCESS) {
 		std::cerr << "clCreateKernel failed with " << ierr << std::endl;
@@ -288,7 +302,8 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	int32_t ierr = 0;
 
 	cl_device_id device_id = data_[token].id;
-	cl_kernel kernel = data_[token].kernel;
+	cl_kernel pcr_kernel = data_[token].pcr_kernel;
+	cl_kernel copy_kernel = data_[token].copy_kernel;
 	cl_context context = data_[token].context;
 	cl_command_queue queue = data_[token].queue;
 
@@ -297,7 +312,7 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	 *-------------------------------------------------------------------------*/
 	device_info_t device_info = get_device_info(device_id);
 	kernel_work_group_info_t kernel_info =
-		get_kernel_work_group_info(device_id, device_info, kernel);
+		get_kernel_work_group_info(device_id, device_info, pcr_kernel);
 
 	/*-------------------------------------------------------------------------*
 	 * Sub-system calculations.
@@ -338,43 +353,207 @@ TriCyCL<real_t>::solve(data_token_t token, size_t system_size,
 	interface_t * interface = create_interface_system(system_size,
 		num_systems, sub_size, sub_systems, a, b, c, d);
 
-	// FIXME: Error checking
-	cl_mem d_ia = clCreateBuffer(context,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
-		interface->a, &ierr);
-	cl_mem d_ib = clCreateBuffer(context,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
-		interface->b, &ierr);
-	cl_mem d_ic = clCreateBuffer(context,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
-		interface->c, &ierr);
-	cl_mem d_id = clCreateBuffer(context,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, interface_size*sizeof(real_t),
-		interface->d, &ierr);
-	cl_mem d_ix = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
-		interface_size*sizeof(real_t), NULL, &ierr);
+	/*-------------------------------------------------------------------------*
+	 * Create interface buffers.
+	 *-------------------------------------------------------------------------*/
+	cl_mem_flags is_flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
+	cl_mem d_ia, d_ib, d_ic, d_id, d_ix;
+	cl_mem d_a, d_b, d_c, d_d, d_x;
 
-	ierr = clSetKernelArg(kernel, 0, sizeof(cl_mem), &d_ia);
-	ierr = clSetKernelArg(kernel, 1, sizeof(cl_mem), &d_ib);
-	ierr = clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_ic);
-	ierr = clSetKernelArg(kernel, 3, sizeof(cl_mem), &d_id);
-	ierr = clSetKernelArg(kernel, 4, sizeof(cl_mem), &d_ix);
-	ierr = clSetKernelArg(kernel, 5,
-		(interface_size+1)*5*sizeof(real_t), &d_ix);
-	ierr = clSetKernelArg(kernel, 6, sizeof(int32_t), &interface_size);
-	ierr = clSetKernelArg(kernel, 7, sizeof(int32_t), &interface_systems);
-	ierr = clSetKernelArg(kernel, 8, sizeof(int32_t), &interface_iterations);
+	create_buffer(context, is_flags, interface_size*sizeof(real_t),
+		d_ia, interface->a);
+	create_buffer(context, is_flags, interface_size*sizeof(real_t),
+		d_ib, interface->b);
+	create_buffer(context, is_flags, interface_size*sizeof(real_t),
+		d_ic, interface->c);
+	create_buffer(context, is_flags, interface_size*sizeof(real_t),
+		d_id, interface->d);
+	create_buffer(context, CL_MEM_WRITE_ONLY, interface_size*sizeof(real_t),
+		d_ix, NULL);
 
-	size_t global_offset(0);
+	/*-------------------------------------------------------------------------*
+	 * Create system buffers.
+	 *-------------------------------------------------------------------------*/
+	size_t full_size(sub_size*sub_systems*num_systems);
+
+	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+		d_a, NULL);
+	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+		d_b, NULL);
+	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+		d_c, NULL);
+	create_buffer(context, CL_MEM_READ_ONLY, full_size*sizeof(real_t),
+		d_d, NULL);
+	create_buffer(context, CL_MEM_WRITE_ONLY, full_size*sizeof(real_t),
+		d_x, NULL);
+
+	/*-------------------------------------------------------------------------*
+	 * Set interface arguments.
+	 *-------------------------------------------------------------------------*/
+	ierr = 0;
+	ierr |= clSetKernelArg(pcr_kernel, 0, sizeof(cl_mem), &d_ia);
+	ierr |= clSetKernelArg(pcr_kernel, 1, sizeof(cl_mem), &d_ib);
+	ierr |= clSetKernelArg(pcr_kernel, 2, sizeof(cl_mem), &d_ic);
+	ierr |= clSetKernelArg(pcr_kernel, 3, sizeof(cl_mem), &d_id);
+	ierr |= clSetKernelArg(pcr_kernel, 4, sizeof(cl_mem), &d_ix);
+	ierr |= clSetKernelArg(pcr_kernel, 5,
+		(interface_size+1)*5*sizeof(real_t), NULL);
+	ierr |= clSetKernelArg(pcr_kernel, 6, sizeof(int32_t), &interface_size);
+	ierr |= clSetKernelArg(pcr_kernel, 7, sizeof(int32_t), &interface_systems);
+	ierr |= clSetKernelArg(pcr_kernel, 8, sizeof(int32_t),
+		&interface_iterations);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clSetKernelArg, ierr);
+	} // if
+
+	/*-------------------------------------------------------------------------*
+	 * Set copy arguments.
+	 *-------------------------------------------------------------------------*/
+	ierr = 0;
+	ierr |= clSetKernelArg(copy_kernel, 0, sizeof(cl_mem), &d_a);
+	ierr |= clSetKernelArg(copy_kernel, 1, sizeof(cl_mem), &d_b);
+	ierr |= clSetKernelArg(copy_kernel, 2, sizeof(cl_mem), &d_c);
+	ierr |= clSetKernelArg(copy_kernel, 3, sizeof(cl_mem), &d_d);
+	ierr |= clSetKernelArg(copy_kernel, 4, sizeof(cl_mem), &d_ix);
+	ierr |= clSetKernelArg(copy_kernel, 5, sizeof(int32_t), &system_size);
+	ierr |= clSetKernelArg(copy_kernel, 6, sizeof(int32_t), &sub_size);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clSetKernelArg, ierr);
+	} // if
+
+	size_t offset(0);
 	size_t global_size(interface_size);
 	size_t local_size(interface_size);
+	cl_event events[4];
 	cl_event event;
 
-	ierr = clEnqueueNDRangeKernel(queue, kernel, 1, &global_offset,
+	/*-------------------------------------------------------------------------*
+	 * Solve interface system.
+	 *-------------------------------------------------------------------------*/
+	ierr = clEnqueueNDRangeKernel(queue, pcr_kernel, 1, &offset,
 		&global_size, &local_size, 0, NULL, &event);
 
 	if(ierr != CL_SUCCESS) {
-		CL_ABORTerr(clEnqueueNDRangeKernel, ierr);
+		CL_ABORTkernel(clEnqueueNDRangeKernel, ierr, "solve");
+	} // if
+
+	/*-------------------------------------------------------------------------*
+	 * Begin writing full system to device.
+	 *-------------------------------------------------------------------------*/
+	ierr = 0;
+	ierr |= clEnqueueWriteBuffer(queue, d_a, 0, offset,
+		full_size*sizeof(real_t), a, 0, NULL, &events[0]);
+	ierr |= clEnqueueWriteBuffer(queue, d_b, 0, offset,
+		full_size*sizeof(real_t), b, 0, NULL, &events[1]);
+	ierr |= clEnqueueWriteBuffer(queue, d_c, 0, offset,
+		full_size*sizeof(real_t), c, 0, NULL, &events[2]);
+	ierr |= clEnqueueWriteBuffer(queue, d_d, 0, offset,
+		full_size*sizeof(real_t), d, 0, NULL, &events[3]);
+	
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clSetKernelArg, ierr);
+	} // if
+
+	/*-------------------------------------------------------------------------*
+	 * Block for interface solve kernel.
+	 *-------------------------------------------------------------------------*/
+	ierr = clWaitForEvents(1, &event);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clSetKernelArg, ierr);
+	} // if
+
+	/*-------------------------------------------------------------------------*
+	 * Set full system arguments.
+	 *-------------------------------------------------------------------------*/
+	size_t sub_iterations(iterations(sub_size));
+	ierr = 0;
+	ierr |= clSetKernelArg(pcr_kernel, 0, sizeof(cl_mem), &d_a);
+	ierr |= clSetKernelArg(pcr_kernel, 1, sizeof(cl_mem), &d_b);
+	ierr |= clSetKernelArg(pcr_kernel, 2, sizeof(cl_mem), &d_c);
+	ierr |= clSetKernelArg(pcr_kernel, 3, sizeof(cl_mem), &d_d);
+	ierr |= clSetKernelArg(pcr_kernel, 4, sizeof(cl_mem), &d_x);
+	ierr |= clSetKernelArg(pcr_kernel, 5,
+		(interface_size+1)*5*sizeof(real_t), NULL);
+	ierr |= clSetKernelArg(pcr_kernel, 6, sizeof(int32_t), &sub_size);
+	ierr |= clSetKernelArg(pcr_kernel, 7, sizeof(int32_t), &sub_systems);
+	ierr |= clSetKernelArg(pcr_kernel, 8, sizeof(int32_t), &sub_iterations);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clSetKernelArg, ierr);
+	} // if
+
+#if 1
+	/*-------------------------------------------------------------------------*
+	 * Read interface system solution.
+	 *-------------------------------------------------------------------------*/
+	ierr = clEnqueueReadBuffer(queue, d_ix, 1, offset,
+		interface_size*sizeof(real_t), interface->x, 0, NULL, NULL);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clSetKernelArg, ierr);
+	} // if
+
+	interface->print();
+#endif
+
+	/*-------------------------------------------------------------------------*
+	 * Block for full system write.
+	 *-------------------------------------------------------------------------*/
+	ierr = clWaitForEvents(4, events);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clWaitForEvents, ierr);
+	} // if
+
+	global_size = interface_size*num_systems;
+	local_size = sub_systems*num_systems;
+
+	ierr = clEnqueueNDRangeKernel(queue, copy_kernel, 1, &offset,
+		&global_size, &local_size, 0, NULL, &event);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTkernel(clEnqueueNDRangeKernel, ierr, "solve");
+	} // if
+
+	ierr = clWaitForEvents(1, &event);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clSetKernelArg, ierr);
+	} // if
+
+	/*-------------------------------------------------------------------------*
+	 * Solve system system.
+	 *-------------------------------------------------------------------------*/
+	global_size = full_size;
+	local_size = sub_size;
+
+	ierr = clEnqueueNDRangeKernel(queue, pcr_kernel, 1, &offset,
+		&global_size, &local_size, 0, NULL, &event);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTkernel(clEnqueueNDRangeKernel, ierr, "solve");
+	} // if
+
+	/*-------------------------------------------------------------------------*
+	 * Block for full system solve kernel.
+	 *-------------------------------------------------------------------------*/
+	ierr = clWaitForEvents(1, &event);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clWaitForEvents, ierr);
+	} // if
+
+	/*-------------------------------------------------------------------------*
+	 * Read full system solution.
+	 *-------------------------------------------------------------------------*/
+	ierr = clEnqueueReadBuffer(queue, d_x, 1, offset,
+		system_size*num_systems*sizeof(real_t), x, 0, NULL, NULL);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clEnqueueReadBuffer, ierr);
 	} // if
 
 	delete interface;
@@ -442,12 +621,26 @@ TriCyCL<real_t>::create_interface_system(size_t system_size,
 		} // for
 	} // for
 
-#if 1
-	interface->print();
-#endif
-
 	return interface;
 } // create_interface_system
+
+/*----------------------------------------------------------------------------*
+ * Create device buffers.
+ *----------------------------------------------------------------------------*/
+
+template<typename real_t>
+void
+TriCyCL<real_t>::create_buffer(cl_context & context, cl_mem_flags flags,
+	size_t bytes, cl_mem & d_p, void * h_p) {
+	CALLER_SELF
+	int32_t ierr = 0;
+
+	d_p = clCreateBuffer(context, flags, bytes, h_p, &ierr);
+
+	if(ierr != CL_SUCCESS) {
+		CL_ABORTerr(clCreateBuffer, ierr);
+	} // if
+} // create_buffer
 
 /*----------------------------------------------------------------------------*
  * Get device information.
