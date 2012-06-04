@@ -47,7 +47,7 @@ int main(int argc, char ** argv) {
 		exit(1);
 	} // if
 
-	int32_t cpu = 0;
+	int32_t cpu = 1;
 	ierr = clGetDeviceIDs(platform, cpu == 1 ? CL_DEVICE_TYPE_CPU :
 		CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
 
@@ -125,7 +125,7 @@ int main(int argc, char ** argv) {
 	for(size_t s=0; s<systems; ++s) {
 		for(size_t i=0; i<elements; ++i) {
 			size_t offset = s*elements+i;
-			fprintf(stdout, "%.16lf\n", x[offset]);
+//			fprintf(stdout, "%.16lf\n", x[offset]);
 			const double abs = ABS(analytic[offset], x[offset]);
 			rms += SQR(abs);
 			max = MAX(abs, max);
