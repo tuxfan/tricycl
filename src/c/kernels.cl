@@ -1,5 +1,5 @@
 /*
-	Adapted for TriCyCL from NVIDIA example.
+ * Adapted for TriCyCL from NVIDIA example.
  */
 
 /*
@@ -106,6 +106,15 @@ __kernel void pcr_branch_free_kernel(__global real_t *a_d,
     
 	x_d[thid + blid * system_size] = x[thid];
 } // pcr_branch_free_kernel
+
+/*
+ * Written by Ben Bergen for TriCyCL, June 2012
+ *
+ * This kernel copies the solutions of an interface system into the
+ * device-side full system, uncoupling them so that a new system
+ * of num_systems*sub_size*subsystems can be solved with the above
+ * cyclic reduction kernel.
+ */
 
 __kernel void uncouple(__global real_t * a, __global real_t * b,
 	__global real_t * c, __global real_t * d, __global real_t * ix,

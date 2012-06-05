@@ -25,7 +25,7 @@ echo "#-------------------------------------------------------------------------
 echo
 echo "lib_LTLIBRARIES = libtricycl.la"
 echo
-echo "INCLUDES = -I\${top_srcdir}/src \\"
+echo "INCLUDES = -I\${top_srcdir}/src/include \\"
 echo "	-I\${top_builddir}/local \\"
 echo "	@EXTRA_CPPFLAGS@"
 echo
@@ -35,7 +35,7 @@ echo "AM_CXXFLAGS = -std=c++0x"
 echo
 echo "BUILT_SOURCES = \${top_builddir}/local/kernel_strings.c"
 echo
-echo "\${top_builddir}/local/kernel_strings.c : \${top_srcdir}/src/*.cl"
+echo "\${top_builddir}/local/kernel_strings.c : \${top_srcdir}/src/*/*.cl"
 echo "	\${top_srcdir}/utils/stringify_kernel_files \\"
 echo "		\${top_srcdir}/src \${top_builddir}/local/kernel_strings"
 

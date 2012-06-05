@@ -3,7 +3,7 @@
 
 bin_PROGRAMS = poisson
 
-INCLUDES = -I${top_srcdir}/src \
+INCLUDES = -I${top_srcdir}/src/include \
 	-I${top_builddir}/local \
 	@EXTRA_CPPFLAGS@
 

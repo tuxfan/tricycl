@@ -13,3 +13,4 @@ configure
 configure.ac
 doc/Makefile.in
 lib
+src/include
