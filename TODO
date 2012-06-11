@@ -1,0 +1,6 @@
+#------------------------------------------------------------------------------#
+# TODO
+#------------------------------------------------------------------------------#
+
+- handle arbitrary system size (non power-of-two)
+- handle system sizes that are smaller than the nominal work group size
