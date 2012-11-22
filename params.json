@@ -1,0 +1,1 @@
+{"google":"","note":"Don't delete this file! It's used internally to help with page regeneration.","name":"TriCyCL","body":"TriCyCL uses Wang's algorithm in conjunction with cyclic reduction to solve large tri-diagonal systems.","tagline":"OpenCL Tri-diagonal Solver Library"}
