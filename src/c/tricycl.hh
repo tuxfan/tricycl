@@ -12,7 +12,7 @@
 #define _include_tricycl_h
 
 #include <tricycl_local.h>
-#include <kernel_strings.h>
+#include <tricycl_strings.h>
 #include <tricycl_utils.h>
 
 /*----------------------------------------------------------------------------*
@@ -32,6 +32,16 @@ template<> struct TypeToOpt<double> {
 		return "-Dreal_t=double";
 	} // option_string
 }; // struct TypeToOpt
+
+/*----------------------------------------------------------------------------*
+ * Struct for initialization from OCL-MLA
+ *----------------------------------------------------------------------------*/
+
+struct ocl_instance_t {
+	cl_device_id id;
+	cl_context context;	
+	cl_command_queue queue;
+}; // struct external_instance_t
 
 /*----------------------------------------------------------------------------*
  * TriCyCL class.
@@ -246,7 +256,7 @@ TriCyCL<real_t>::init(cl_device_id & id, cl_context & context,
 
 	// create program object
 	_solver_data.program = clCreateProgramWithSource(_solver_data.context,
-		1, (const char **)&kernels_PPSTR, NULL, &ierr);
+		1, (const char **)&tricycl_PPSTR, NULL, &ierr);
 
 	if(ierr != CL_SUCCESS) {
 		std::cerr << "clCreateProgramWithSource failed with " <<
@@ -771,6 +781,6 @@ TriCyCL<real_t>::get_kernel_work_group_info(cl_device_id & id,
 	} // if
 
 	return info;
-} // ocl_kernel_work_group_info
+} // get_kernel_work_group_info
 
 #endif // tricycl_hh

@@ -33,11 +33,11 @@ echo "libtricycl_includedir = \${includedir}"
 echo
 echo "AM_CXXFLAGS = -std=c++0x"
 echo
-echo "BUILT_SOURCES = \${top_builddir}/local/kernel_strings.c"
+echo "BUILT_SOURCES = \${top_builddir}/local/tricycl_strings.c"
 echo
-echo "\${top_builddir}/local/kernel_strings.c : \${top_srcdir}/src/*/*.cl"
+echo "\${top_builddir}/local/tricycl_strings.c : \${top_srcdir}/src/*/*.cl"
 echo "	\${top_srcdir}/utils/stringify_kernel_files \\"
-echo "		\${top_srcdir}/src \${top_builddir}/local/kernel_strings"
+echo "		\${top_srcdir}/src \${top_builddir}/local/tricycl_strings"
 
 echo
 echo "#------------------------------------------------------------------------------#"
@@ -45,7 +45,7 @@ echo "# Headers"
 echo "#------------------------------------------------------------------------------#"
 echo
 echo "libtricycl_include_HEADERS = \\"
-echo "	\${top_builddir}/local/kernel_strings.h \\"
+echo "	\${top_builddir}/local/tricycl_strings.h \\"
 
 numfiles=`$find_exec src -type f -regex '.*\.h' | wc -l`
 cnt=1
@@ -64,7 +64,7 @@ echo "# Sources"
 echo "#------------------------------------------------------------------------------#"
 echo
 echo "libtricycl_la_SOURCES = \\"
-echo "	\${top_builddir}/local/kernel_strings.c \\"
+echo "	\${top_builddir}/local/tricycl_strings.c \\"
 
 numfiles=`$find_exec src -type f -regex $src_str | wc -l`
 cnt=1

@@ -19,8 +19,12 @@ extern "C" {
 size_t tricycl_init_sp(cl_device_id id, cl_context context,
 	cl_command_queue queue);
 
+size_t tricycl_init_sp_ocl(void * instance);
+
 size_t tricycl_init_dp(cl_device_id id, cl_context context,
 	cl_command_queue queue);
+
+size_t tricycl_init_dp_ocl(void * instance);
 
 /*!
 \page tricycl_solve_sp

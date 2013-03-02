@@ -13,38 +13,64 @@ module tricycl_interface
    ! tricycl_init_sp
    !---------------------------------------------------------------------------!
 
-   subroutine tricycl_init_sp(id, context, queue, ierr)
+   subroutine tricycl_init_sp(id, context, queue, token)
       use, intrinsic :: ISO_C_BINDING
       implicit none
       type(c_ptr), value :: id
       type(c_ptr), value :: context
       type(c_ptr), value :: queue
-      integer(c_int32_t) :: ierr
+      integer(c_size_t) :: token
 
-      ierr = tricycl_init_sp_f90(id, context, queue)
+      token = tricycl_init_sp_f90(id, context, queue)
    end subroutine tricycl_init_sp
+
+   !---------------------------------------------------------------------------!
+   ! tricycl_init_sp_ocl
+   !---------------------------------------------------------------------------!
+
+   subroutine tricycl_init_sp_ocl(instance, token)
+      use, intrinsic :: ISO_C_BINDING
+      implicit none
+      type(c_ptr), value :: instance
+      integer(c_size_t) :: token
+
+      token = tricycl_init_sp_ocl_f90(instance)
+   end subroutine tricycl_init_sp_ocl
 
    !---------------------------------------------------------------------------!
    ! tricycl_init_dp
    !---------------------------------------------------------------------------!
 
-   subroutine tricycl_init_dp(id, context, queue, ierr)
+   subroutine tricycl_init_dp(id, context, queue, token)
       use, intrinsic :: ISO_C_BINDING
       implicit none
       type(c_ptr), value :: id
       type(c_ptr), value :: context
       type(c_ptr), value :: queue
-      integer(c_int32_t) :: ierr
+      integer(c_size_t) :: token
 
-      ierr = tricycl_init_dp_f90(id, context, queue)
+      token = tricycl_init_dp_f90(id, context, queue)
    end subroutine tricycl_init_dp
+
+   !---------------------------------------------------------------------------!
+   ! tricycl_init_dp_ocl
+   !---------------------------------------------------------------------------!
+
+   subroutine tricycl_init_dp_ocl(instance, token)
+      use, intrinsic :: ISO_C_BINDING
+      implicit none
+      type(c_ptr), value :: instance
+      integer(c_size_t) :: token
+
+      token = tricycl_init_dp_ocl_f90(instance)
+   end subroutine tricycl_init_dp_ocl
 
    !---------------------------------------------------------------------------!
    ! tricycl_solve_sp
    !---------------------------------------------------------------------------!
 
    subroutine tricycl_solve_sp(token, system_size, num_systems, &
-      a, b, c, d, x)
+      a, b, c, d, x, ierr)
       use, intrinsic :: ISO_C_BINDING
       implicit none
       integer(c_size_t), value :: token
@@ -66,7 +92,7 @@ module tricycl_interface
    !---------------------------------------------------------------------------!
 
    subroutine tricycl_solve_dp(token, system_size, num_systems, &
-      a, b, c, d, x)
+      a, b, c, d, x, ierr)
       use, intrinsic :: ISO_C_BINDING
       implicit none
       integer(c_size_t), value :: token

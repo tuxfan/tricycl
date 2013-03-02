@@ -1,4 +1,5 @@
 !------------------------------------------------------------------------------!
+!
 !------------------------------------------------------------------------------!
 
 module tricycl_bindings
@@ -10,28 +11,52 @@ interface
    !---------------------------------------------------------------------------!
 
    function tricycl_init_sp_f90(id, context, queue) &
-      result(ierr) bind(C, name="tricycl_init_sp")
+      result(token) bind(C, name="tricycl_init_sp")
       use, intrinsic :: ISO_C_BINDING
       implicit none
       type(c_ptr), value :: id
       type(c_ptr), value :: context
       type(c_ptr), value :: queue
-      integer(c_int32_t) :: ierr
+      integer(c_size_t) :: token
    end function tricycl_init_sp_f90
+
+   !---------------------------------------------------------------------------!
+   ! tricycl_init_sp_ocl_f90
+   !---------------------------------------------------------------------------!
+
+   function tricycl_init_sp_ocl_f90(instance) &
+      result(token) bind(C, name="tricycl_init_sp_ocl")
+      use, intrinsic :: ISO_C_BINDING
+      implicit none
+      type(c_ptr), value :: instance
+      integer(c_size_t) :: token
+   end function tricycl_init_sp_ocl_f90
 
    !---------------------------------------------------------------------------!
    ! tricycl_init_dp_f90
    !---------------------------------------------------------------------------!
 
    function tricycl_init_dp_f90(id, context, queue) &
-      result(ierr) bind(C, name="tricycl_init_dp")
+      result(token) bind(C, name="tricycl_init_dp")
       use, intrinsic :: ISO_C_BINDING
       implicit none
       type(c_ptr), value :: id
       type(c_ptr), value :: context
       type(c_ptr), value :: queue
-      integer(c_int32_t) :: ierr
+      integer(c_size_t) :: token
    end function tricycl_init_dp_f90
+
+   !---------------------------------------------------------------------------!
+   ! tricycl_init_dp_ocl_f90
+   !---------------------------------------------------------------------------!
+
+   function tricycl_init_dp_ocl_f90(instance) &
+      result(token) bind(C, name="tricycl_init_dp_ocl")
+      use, intrinsic :: ISO_C_BINDING
+      implicit none
+      type(c_ptr), value :: instance
+      integer(c_size_t) :: token
+   end function tricycl_init_dp_ocl_f90
 
    !---------------------------------------------------------------------------!
    ! tricycl_solve_sp_f90
